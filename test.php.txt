@@ -1,0 +1,81 @@
+.<?php
+$login = 'astral';
+$password = 'cosmoS999';
+
+$client = new SoapClient( 
+	'http://ws.rufax.ru/export/ws.rufax.ru/gws_01.wsdl',
+    array( 
+        // Stuff for development. 
+        'trace' => 1,  // нужен для работы метода __getLastResponse
+        'exceptions' => false,
+        'cache_wsdl' => WSDL_CACHE_NONE, 
+        'features' => SOAP_SINGLE_ELEMENT_ARRAYS,
+    ) 
+); 
+
+$client->login(array('login' => $login, 'password' => $password));
+
+/*
+Вот здесь имеется проблема, связанная с тем, что сервер возвращает
+невалидный xml код. Так как код невалидный, то SoapClient не может его
+обработать и получить из него информацию (идентификатор сессии).
+
+Поэтому делается следующее - в переменную $response сохраняется ответ сервера
+и с помощью регулярного выражения вытаскивается идентификатор сессии.
+*/
+
+$response = $client->__getLastResponse();
+
+if(!preg_match('/sessionId>([^<]+)</', $response, $patt)){
+	throw Exception('Not Found SessionId');
+}
+$sessionId = $patt[1];
+
+// подготовка данных к отправке файла
+
+$file = 'fax.pdf';
+$base64Binary =  file_get_contents($file);
+$xBinaryAttachment = array(
+ '_' => $base64Binary,
+ 'md5' => md5($base64Binary),
+ 'fileName' => $file
+);
+
+$xFaxSubmit = array(
+ 'recipient'  => "+74951234567",
+ 'attachment' => $xBinaryAttachment,
+ 'act' => 'send'  // кстати, если указать 'draft', то сервер вернёт ошибку
+);
+
+$xFaxSubmitList = array(
+ 'message' => $xFaxSubmit
+);
+
+$submitFaxListRequestElement = array(
+ 'messageList' => $xFaxSubmitList,
+ 'sessionId' => $sessionId,
+);
+
+
+$client->submitFaxList($submitFaxListRequestElement);
+
+
+/*
+Всё что ниже - это вывод в консоль ответ сервера на метод submitFaxList.
+
+Отдельно парсится и выводится поле description, содержащее сообщение об ошибке
+или фразу "ok", в случае успеха.
+*/
+
+$response = $client->__getLastResponse();
+
+print_r($response);
+
+preg_match('/description>([^<]+)</', $response, $patt);
+echo "\n\ndescription=";
+print_r(iconv("utf-8", 'koi8', $patt[1]));
+echo "\n";
+
+
+
+?>

@@ -1,0 +1,641 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/*
+ * Author: step
+ * Date: 01.05.2008
+ */
+-->
+<wsdl:definitions
+        xmlns="http://schemas.xmlsoap.org/wsdl/"
+        xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+        xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/"
+        xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl"
+        xmlns:xs="http://www.w3.org/2001/XMLSchema"
+        xmlns:gws_01="http://club400.ru/ws/generated/gws_01"
+        targetNamespace="http://club400.ru/ws/generated/gws_01">
+
+    <wsdl:types>
+        <xs:schema
+                xmlns="http://schemas.xmlsoap.org/wsdl/"
+                attributeFormDefault="qualified"
+                elementFormDefault="qualified"
+                targetNamespace="http://club400.ru/ws/generated/gws_01"
+                xmlns:gws_01="http://club400.ru/ws/generated/gws_01">
+
+            <xs:complexType name="xIntArray">
+                <xs:sequence>
+                    <xs:element minOccurs="0" maxOccurs="unbounded" name="val" type="xs:int"/>
+                </xs:sequence>
+            </xs:complexType>
+
+            <xs:complexType name="xStringArray">
+                <xs:sequence>
+                    <xs:element minOccurs="0" maxOccurs="unbounded" name="val" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
+
+
+            <!--<xs:enumeration value="send_pending"/>-->
+
+
+            <xs:simpleType name="xFaxSubmitAction">
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="send"/>
+                    <xs:enumeration value="draft"/>
+                </xs:restriction>
+            </xs:simpleType>
+
+            <xs:complexType name="xBinaryAttachment">
+                <xs:simpleContent>
+                    <xs:extension base="xs:base64Binary">
+                        <xs:attribute name="md5" type="xs:string"/>
+                        <xs:attribute use="required" name="fileName" type="xs:string"/>
+                    </xs:extension>
+                </xs:simpleContent>
+            </xs:complexType>
+
+
+            <xs:simpleType name="xFaxState">
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="incoming"/>
+                    <xs:enumeration value="sent"/>
+                    <xs:enumeration value="draft"/>
+                </xs:restriction>
+            </xs:simpleType>
+
+
+            <xs:complexType name="xReportSummary">
+                <xs:sequence>
+
+                    <!--уникальное id получателя факса -->
+                    <xs:element minOccurs="1" maxOccurs="1" name="faxRecipientId" type="xs:int"/>
+                    <!--id cообщения-->
+                    <xs:element minOccurs="1" maxOccurs="1" name="faxMessageId" type="xs:int"/>
+
+                    <!--номер получателя в +<код страны> формате -->
+                    <xs:element minOccurs="0" maxOccurs="1" name="recipient" type="xs:string"/>
+
+                    <!--кол-во пришедших извещений о доставке на этот номер-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="delivered" type="xs:int"/>
+
+                    <!--кол-во пришедших извещений о получении на этот номер-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="receipt" type="xs:int"/>
+
+                    <!--кол-во пришедших извещений об ошибке на этот номер-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="error" type="xs:int"/>
+
+                    <!--время последнего пришедшего квитка на этот номер -->
+                    <xs:element minOccurs="0" maxOccurs="1" name="lastarrivaltime" type="xs:string"/>
+
+                    <!--ID получателя внутри сообщения, если получатель один EI=1-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="ei" type="xs:int"/>
+
+                    <!--поле "всего страниц" в сообщении, после конвертации их в факс-формат -->
+                    <xs:element minOccurs="0" maxOccurs="1" name="pagesTotal" type="xs:int"/>
+
+                    <!--поле "доставлено страниц" из квитка о доставке, (могут быть доставлены не все страницы) -->
+                    <xs:element minOccurs="0" maxOccurs="1" name="pagesSent" type="xs:int"/>
+
+                    <!--поле TSID/CSID  ID факс-аппарата, высвечивается при отправке/получении факса в окошечке на факс аппарате
+                    http://en.wikipedia.org/wiki/Called_subscriber_identification
+                    -->
+                    <xs:element minOccurs="0" maxOccurs="1" name="faxCsid" type="xs:string"/>
+
+                    <!--код доставки-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="dc" type="xs:int"/>
+
+                    <!--дополнительная текстовая информация о доставке-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="supInfo" type="xs:string"/>
+
+                    <!--//продолжительность всех соединений в секундах, соответствует параметру ON= из supInfo квитка-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="transmitDuration" type="xs:int"/>
+
+                </xs:sequence>
+            </xs:complexType>
+
+            <xs:complexType name="xReportSummaryList">
+                <xs:sequence>
+                    <xs:element minOccurs="0" maxOccurs="unbounded" name="reportSummary"
+                                type="gws_01:xReportSummary"/>
+                </xs:sequence>
+            </xs:complexType>
+
+
+            <xs:complexType name="xFaxFilter">
+                <xs:sequence>
+                    <!--максимальная длинна загружаемого списка сообщений-->
+                    <xs:element name="limit" type="xs:int" minOccurs="1" maxOccurs="1" default="50"/>
+
+                    <!--messageId загружаемых сообщений должны быть > xFaxFilter.edgeFaxId
+               (всегда ипользуется сортировка по возрастанию messageId)-->
+                    <xs:element name="edgeFaxId" type="xs:int" minOccurs="0" maxOccurs="1"/>
+
+                    <!--state загружаемых сообщений-->
+                    <xs:element name="state" type="gws_01:xFaxState" minOccurs="0" maxOccurs="1"/>
+
+                    <!--
+                        folderid загружаемых сообщений
+                        public static int ALL = 0;
+                        public static int FID_MAIL_IN = 2; //Входящие
+                        public static int FID_SENT = 4;    //Отправленные
+                        public static int FID_TRASH = 5;   //Удаленные
+                        public static int FID_DRAFT = 6;   //Черновики
+
+                        public static int FID_ARHIVE = 7;    //Архив/Все
+                        public static int FID_SPAM = 8;    // Спам
+                    -->
+                    <xs:element name="folderId" type="xs:int" minOccurs="0" maxOccurs="1" default="2"/>
+
+                    <!--messageId загружаемого сообщения должны быть = xFaxFilter.messageId-->
+                    <xs:element name="messageId" type="xs:int" minOccurs="0" maxOccurs="1"/>
+
+                    <!--на загружаемых сообщениях должны стоять все метки из списка xFaxFilter.tagList -->
+                    <xs:element name="tagList" type="gws_01:xIntArray" minOccurs="0" maxOccurs="1"/>
+
+                    <!--сообщения должны относится к рассылке с id=dlistId-->
+                    <xs:element name="dlistId" type="xs:int" minOccurs="0" maxOccurs="1" default="0"/>
+
+                    <!--текстовая часть сообщения или адрес или тема должны содержать pattern-->
+                    <xs:element name="pattern" type="xs:string" minOccurs="0" maxOccurs="1"/>
+
+                    <!--загружать body сообщения-->
+                    <xs:element name="bodyFlag" type="xs:boolean" minOccurs="1" maxOccurs="1" default="false"/>
+
+                    <!--загружать список бинарных вложений(attachments) сообщения-->
+                    <xs:element name="attachmentsFlag" type="xs:boolean" minOccurs="1" maxOccurs="1" default="false"/>
+
+                    <!--ограничение на максимальное число загружаемых элементов в reports (список извещений сообщения) если reportsLimit=0 значит reports загружать не надо-->
+                    <xs:element name="reportsLimit" type="xs:int" minOccurs="0" maxOccurs="1" default="5"/>
+                </xs:sequence>
+            </xs:complexType>
+
+            <xs:complexType name="xReportsummaryFilter">
+                <xs:sequence>
+                    <!--минимальный recipientId, необязательный параметр, >= -->
+                    <xs:element name="minRecipientId" type="xs:int" minOccurs="0" maxOccurs="1"/>
+                    <!--максимальный recipientId, необязательный параметр, <= -->
+                    <xs:element name="maxRecipientId" type="xs:int" minOccurs="0" maxOccurs="1"/>
+                    <!--messageId сообщения для которого нужно загрузить извещения-->
+                    <xs:element name="faxMessageId" type="xs:int" minOccurs="0" maxOccurs="1"/>
+                </xs:sequence>
+            </xs:complexType>
+
+
+
+
+
+            <xs:complexType name="xFaxSubmit">
+                <xs:sequence>
+                    <!--SID предварительно загруженного голосового файла, NULL - НЕ ЗАДАНО -->
+                    <xs:element minOccurs="0" maxOccurs="1" name="voiceDocumentSID" type="xs:string"/>
+
+                    <!--Terminal ID, при отправке - желаемый терминал для отправки-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="terminalId" type="xs:int" default="0"/>
+
+                    <!--список получателей-->
+                    <xs:element minOccurs="0" maxOccurs="unbounded" name="recipient" type="xs:string"/>
+
+                    <!--faxCsId, -->
+                    <xs:element minOccurs="0" maxOccurs="1" name="faxCsId" type="xs:string"/>
+
+                    <!--тема-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="subj" type="xs:string"/>
+
+                    <!--список бинарных вложений
+                     список html вложений на отправку надо добавить сюда же, т.к их может быть несколько
+                    -->
+                    <xs:element minOccurs="0" maxOccurs="unbounded" name="attachment"
+                                type="gws_01:xBinaryAttachment"/>
+
+                    <!--список меток которые нужно поставить на факс-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="tags" type="gws_01:xIntArray"/>
+                </xs:sequence>
+                <xs:attribute name="act" type="gws_01:xFaxSubmitAction" default="send"/>
+            </xs:complexType>
+
+            <xs:complexType name="xFaxSubmitList">
+                <xs:sequence>
+                    <xs:element minOccurs="0" maxOccurs="unbounded" name="message" type="gws_01:xFaxSubmit"/>
+                </xs:sequence>
+            </xs:complexType>
+
+
+
+            <xs:complexType name="xFax">
+                <xs:sequence>
+                    <!--Terminal ID, при отправке - желаемый терминал для отправки-->
+                    <xs:element minOccurs="1" maxOccurs="1" name="terminalId" type="xs:int" default="0"/>
+
+                    <!--список получателей-->
+                    <xs:element minOccurs="0" maxOccurs="unbounded" name="recipient" type="xs:string"/>
+
+                    <!--тема-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="subj" type="xs:string"/>
+
+                    <!--список бинарных вложений-->
+                    <xs:element minOccurs="0" maxOccurs="unbounded" name="attachment" type="gws_01:xBinaryAttachment"/>
+
+                    <!--уникальный идентификатор сообщения (в рамках сервера)-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="id" type="xs:int"/>
+
+                    <!--отправитель-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="from" type="xs:string"/>
+
+                    <!--время последнего события сообщения-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="date" type="xs:string"/>
+
+                    <!--список извещений для сообщения-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="reports" type="gws_01:xReportSummaryList"/>
+
+                    <!--число вложений сообщения-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="attachCount" type="xs:int"/>
+
+                    <!--число получателей сообщения-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="recipCount" type="xs:int"/>
+
+                    <!--размер сообщения-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="size" type="xs:int"/>
+
+                    <!--состояние сообщения-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="state" type="gws_01:xFaxState"/>
+
+                    <!--флаг прочитано/не прочитано-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="read" type="xs:int"/>
+
+                    <!--список меток которые стоят на сообщении-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="tags" type="gws_01:xIntArray"/>
+
+                    <!--принадлежность списку рассылки-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="dlist" type="xs:int"/>
+
+                    <!--id папки в которой лежит сообщение-->
+                    <xs:element minOccurs="0" maxOccurs="1" name="folderId" type="xs:int"/>
+                </xs:sequence>
+            </xs:complexType>
+
+            <xs:complexType name="xFaxList">
+                <xs:sequence>
+                    <xs:element minOccurs="0" maxOccurs="50" name="message" type="gws_01:xFax"/>
+                    <xs:element minOccurs="0" maxOccurs="1" name="hasNextPage" type="xs:boolean"/>
+                </xs:sequence>
+            </xs:complexType>
+<!-- SIMPLE XLIB TYPES -->
+
+
+
+            <xs:element name="UserAuthElement">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="login" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                        <xs:element name="password" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+
+
+            <xs:element name="SessionElement">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="sessionId" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+
+            <xs:element name="StandartBooleanResponseElement">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" maxOccurs="1" name="description" type="xs:string"/>
+                        <xs:element minOccurs="1" maxOccurs="1" name="result" type="xs:boolean"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+
+            <xs:element name="SessionBooleanResponseElement">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" maxOccurs="1" name="description" type="xs:string"/>
+                        <xs:element minOccurs="1" maxOccurs="1" name="result" type="xs:boolean"/>
+                        <xs:element minOccurs="0" maxOccurs="1" name="sessionId" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+
+            <!-- ================ getReportSummaryList =============== -->
+            <xs:element name="getReportSummaryListResponseElement">
+                <xs:complexType>
+                    <xs:sequence>
+
+                        <!--reportSummaryList - список уведомлений. отображающий текущее состояние факса -->
+                        <xs:element minOccurs="0" maxOccurs="1" name="reportSummaryList" type="gws_01:xReportSummaryList"/>
+
+                        <!--текстовое описание ошибки для result==false-->
+                        <xs:element minOccurs="0" maxOccurs="1" name="description" type="xs:string"/>
+
+                        <!--если result==false, функция выполнена с ошибкой -->
+                        <xs:element minOccurs="1" maxOccurs="1" name="result" type="xs:boolean"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+
+            <!--загрузить список событий начиная с fromTime -->
+            <xs:element name="getReportSummaryListRequestElement">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="reportsummaryFilter" type="gws_01:xReportsummaryFilter" minOccurs="1"
+                                    maxOccurs="1"/>
+                        <xs:element name="sessionId" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <!-- ================ getReportSummaryList =============== -->
+
+            <!-- ================ getFaxList =============== -->
+            <xs:element name="getFaxListResponseElement">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="1" maxOccurs="1" name="messageList" type="gws_01:xFaxList"/>
+                        <xs:element minOccurs="0" maxOccurs="1" name="description" type="xs:string"/>
+                        <xs:element minOccurs="1" maxOccurs="1" name="result" type="xs:boolean"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+
+            <!--загрузить список сообщений начиная с fromTime -->
+            <xs:element name="getFaxListRequestElement">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="messageFilter" type="gws_01:xFaxFilter" minOccurs="1" maxOccurs="1"/>
+                        <xs:element name="loadType" type="xs:int" minOccurs="1" maxOccurs="1" default="0"/>
+                        <xs:element name="sessionId" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <!-- ================ getFaxList =============== -->
+
+            <!-- ================ submitFaxList =============== -->
+            <xs:element name="submitFaxListRequestElement">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="messageList" type="gws_01:xFaxSubmitList" minOccurs="1" maxOccurs="1"/>
+                        <xs:element name="sessionId" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+
+
+            <!--Если отправка прошла успешно submittedFaxMessageIdList содержит ID отправленных факсов,
+            если нет то submittedFaxMessageIdList - пустой, а в поле description - текст ошибки -->
+            <xs:element name="submitFaxListResponseElement">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="submittedFaxMessageIdList" type="gws_01:xIntArray" minOccurs="0" maxOccurs="1"/>
+                        <xs:element minOccurs="0" maxOccurs="1" name="description" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <!-- ================ submitFaxList =============== -->
+
+
+            <!-- ================ функция putVoiceDocument =============== -->
+            <xs:element name="putVoiceDocumentRequestElement">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="sessionId" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                        <xs:element name="voiceDocument" minOccurs="1" maxOccurs="1" type="gws_01:xBinaryAttachment"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <!--Если функция выполнена успешно то в voiceDocumentId содержится ID добавленного голосового вложения,
+            если неуспешно то voiceDocumentId  = 0, а в description описана ошибка -->
+            <xs:element name="putVoiceDocumentResponseElement">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="voiceDocumentSID" minOccurs="0" maxOccurs="1" type="xs:string"/>
+                        <xs:element minOccurs="0" maxOccurs="1" name="description" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <!-- ================ функция putVoiceDocument =============== -->
+        </xs:schema>
+    </wsdl:types>
+
+
+    <message name="standartBooleanResponseMessage">
+        <wsdl:part name="part1" element="gws_01:StandartBooleanResponseElement"/>
+    </message>
+
+
+    <!-- ================ login =============== -->
+    <message name="loginRequestMessage">
+        <part name="part1" element="gws_01:UserAuthElement"/>
+    </message>
+
+    <message name="loginResponseMessage">
+        <part name="part1" element="gws_01:SessionBooleanResponseElement"/>
+    </message>
+    <!-- ================ login =============== -->
+
+    <!-- ================ disconnect =============== -->
+    <message name="disconnectRequestMessage">
+        <part name="part1" element="gws_01:SessionElement"/>
+    </message>
+    <!-- ================ disconnect =============== -->
+
+
+    <!-- ================ getReportSummaryList =============== -->
+    <message name="getReportSummaryListRequestMessage">
+        <wsdl:part name="part1" element="gws_01:getReportSummaryListRequestElement"/>
+    </message>
+
+    <message name="getReportSummaryListResponseMessage">
+        <wsdl:part name="part1" element="gws_01:getReportSummaryListResponseElement"/>
+    </message>
+    <!-- ================ getReportSummaryList =============== -->
+
+
+    <!-- ================ getFaxList =============== -->
+    <message name="getFaxListRequestMessage">
+        <wsdl:part name="part1" element="gws_01:getFaxListRequestElement"/>
+    </message>
+
+    <message name="getFaxListResponseMessage">
+        <wsdl:part name="part1" element="gws_01:getFaxListResponseElement"/>
+    </message>
+    <!-- ================ getFaxList =============== -->
+
+    <!-- ================ submitFaxList =============== -->
+    <message name="submitFaxListRequestMessage">
+        <wsdl:part name="part1" element="gws_01:submitFaxListRequestElement"/>
+    </message>
+
+    <message name="submitFaxListResponseMessage">
+        <wsdl:part name="part1" element="gws_01:submitFaxListResponseElement"/>
+    </message>
+    <!-- ================ submitFaxList =============== -->
+
+    
+    <!-- ================ putVoiceDocument =============== -->
+    <message name="putVoiceDocumentRequestMessage">
+        <wsdl:part name="part1" element="gws_01:putVoiceDocumentRequestElement"/>
+    </message>
+
+    <message name="putVoiceDocumentResponseMessage">
+        <wsdl:part name="part1" element="gws_01:putVoiceDocumentResponseElement"/>
+    </message>
+    <!-- ================ putVoiceDocument =============== -->
+
+    <wsdl:portType name="MTOMServicePortType">
+
+        <!-- ================ login =============== -->
+        <wsdl:operation name="login">
+            <wsdl:input message="gws_01:loginRequestMessage"
+                        wsaw:Action="login"/>
+            <wsdl:output message="gws_01:loginResponseMessage"
+                         wsaw:Action="http://schemas.xmlsoap.org/wsdl/MTOMServicePortType/loginResponseMessage"/>
+        </wsdl:operation>
+        <!-- ================ login =============== -->
+
+        <!-- ================ disconnect =============== -->
+        <wsdl:operation name="disconnect">
+            <wsdl:input message="gws_01:disconnectRequestMessage" wsaw:Action="disconnect"/>
+            <wsdl:output message="gws_01:standartBooleanResponseMessage"
+                         wsaw:Action="http://schemas.xmlsoap.org/wsdl/MTOMServicePortType/standartBooleanResponseMessage"/>
+        </wsdl:operation>
+        <!-- ================ disconnect =============== -->
+
+
+        <!-- ================ getFaxList =============== -->
+        <wsdl:operation name="getFaxList">
+            <wsdl:input message="gws_01:getFaxListRequestMessage" wsaw:Action="getFaxList"/>
+            <wsdl:output message="gws_01:getFaxListResponseMessage"
+                         wsaw:Action="http://schemas.xmlsoap.org/wsdl/MTOMServicePortType/getFaxListResponseMessage"/>
+        </wsdl:operation>
+        <!-- ================ getFaxList =============== -->
+
+        <!-- ================ submitFaxList =============== -->
+        <wsdl:operation name="submitFaxList">
+            <wsdl:input message="gws_01:submitFaxListRequestMessage" wsaw:Action="submitFaxList"/>
+            <wsdl:output message="gws_01:submitFaxListResponseMessage"
+                         wsaw:Action="http://schemas.xmlsoap.org/wsdl/MTOMServicePortType/submitFaxListResponseMessage"/>
+        </wsdl:operation>
+        <!-- ================ submitFaxList =============== -->
+
+
+        <!-- ================ putVoiceDocument =============== -->
+        <wsdl:operation name="putVoiceDocument">
+            <wsdl:input message="gws_01:putVoiceDocumentRequestMessage" wsaw:Action="putVoiceDocument"/>
+            <wsdl:output message="gws_01:putVoiceDocumentResponseMessage"
+                         wsaw:Action="http://schemas.xmlsoap.org/wsdl/MTOMServicePortType/putVoiceDocumentResponseMessage"/>
+        </wsdl:operation>
+        <!-- ================ putVoiceDocument =============== -->
+
+
+        <!-- ================ getReportSummaryList =============== -->
+        <wsdl:operation name="getReportSummaryList">
+            <wsdl:input message="gws_01:getReportSummaryListRequestMessage" wsaw:Action="getReportSummaryList"/>
+            <wsdl:output message="gws_01:getReportSummaryListResponseMessage"
+                         wsaw:Action="http://schemas.xmlsoap.org/wsdl/MTOMServicePortType/getReportSummaryListResponseMessage"/>
+        </wsdl:operation>
+        <!-- ================ getReportSummaryList =============== -->
+
+
+    </wsdl:portType>
+
+
+    <wsdl:binding name="MTOMServiceSOAP12Binding" type="gws_01:MTOMServicePortType">
+
+        <soap12:binding transport="http://schemas.xmlsoap.org/soap/http"
+                        style="document"/>
+
+        <!-- ================ login =============== -->
+        <wsdl:operation name="login">
+            <soap12:operation soapAction="login" style="document"/>
+
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+
+        </wsdl:operation>
+        <!-- ================ login =============== -->
+
+
+<!-- ================ disconnect =============== -->
+        <wsdl:operation name="disconnect">
+            <soap12:operation soapAction="disconnect" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+<!-- ================ disconnect =============== -->
+
+
+<!-- ================ getFaxList =============== -->
+        <wsdl:operation name="getFaxList">
+            <soap12:operation soapAction="getFaxList" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+<!-- ================ getFaxList =============== -->
+
+
+<!-- ================ submitFaxList =============== -->
+        <wsdl:operation name="submitFaxList">
+            <soap12:operation soapAction="submitFaxList" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+<!-- ================ submitFaxList =============== -->
+
+
+<!-- ================ putVoiceDocument =============== -->
+        <wsdl:operation name="putVoiceDocument">
+            <soap12:operation soapAction="putVoiceDocument" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+<!-- ================ putVoiceDocument =============== -->
+
+
+
+<!-- ================ getReportSummaryList =============== -->
+        <wsdl:operation name="getReportSummaryList">
+            <soap12:operation soapAction="getReportSummaryList" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+<!-- ================ getReportSummaryList =============== -->
+
+
+    </wsdl:binding>
+
+    <wsdl:service name="gws_01">
+        <!--http://ws.rufax.ru/services/gws_01-->
+        <wsdl:port name="gws_01_soap12_http" binding="gws_01:MTOMServiceSOAP12Binding">
+            <soap12:address location="http://ws.rufax.ru/services/gws_01"/>
+        </wsdl:port>
+    </wsdl:service>
+
+</wsdl:definitions>
